@@ -1,0 +1,87 @@
+{
+  "exemplo": true,
+  "aviso": "Catálogo fictício de demonstração. Estes preços não são de uma empresa real.",
+  "empresa": {
+    "nome": "Convertedor Exemplo Ltda.",
+    "cidade": "Cidade Exemplo",
+    "uf": "EX",
+    "linha": "Embalagens flexíveis"
+  },
+  "fatorDesperdicio": 1.12,
+  "setupImpressao": 240,
+  "estruturas": [
+    { "id": "pet-al-pe", "nome": "PET + alumínio + PE", "gramatura": 100, "precoKg": 28 },
+    { "id": "pe-mdo-evoh", "nome": "PE com barreira EVOH", "gramatura": 90, "precoKg": 16 },
+    { "id": "pet-petmet-pe", "nome": "PET + PET metalizado + PE", "gramatura": 85, "precoKg": 22 },
+    { "id": "pet-pe", "nome": "PET + PE", "gramatura": 80, "precoKg": 14 },
+    { "id": "bopp-boppmet", "nome": "BOPP + BOPP metalizado", "gramatura": 40, "precoKg": 18 },
+    { "id": "petg", "nome": "PETG", "gramatura": 70, "precoKg": 20 },
+    { "id": "bopp-mate-petmet-pe", "nome": "BOPP mate + PET metalizado + PE", "gramatura": 75, "precoKg": 24 },
+    { "id": "bopp-mate-al-pe", "nome": "BOPP mate + alumínio + PE", "gramatura": 95, "precoKg": 30 },
+    { "id": "bopp-perola", "nome": "BOPP pérola", "gramatura": 35, "precoKg": 15 },
+    { "id": "bopp-transp", "nome": "BOPP transparente", "gramatura": 30, "precoKg": 12 }
+  ],
+  "tintas": [
+    { "id": "cmyk-branco", "nome": "Digital CMYK + branco", "precoM2": 1.5 },
+    { "id": "cmy-branco", "nome": "Digital CMY + branco", "precoM2": 1.25 },
+    { "id": "cmyk", "nome": "Digital CMYK sem branco", "precoM2": 0.9 },
+    { "id": "preto", "nome": "Digital somente preto", "precoM2": 0.4 },
+    { "id": "especial", "nome": "Digital CMYK + branco + especial", "precoM2": 2.1 }
+  ],
+  "vernizes": [
+    { "id": "Sem", "precoM2": 0 },
+    { "id": "Brilho", "precoM2": 0.3 },
+    { "id": "Verniz Fosco", "precoM2": 0.4 },
+    { "id": "Verniz Paper", "precoM2": 0.55 }
+  ],
+  "formatos": [
+    { "id": "Bobina", "conversaoUn": 0.02, "setup": 80 },
+    { "id": "Flat Bottom", "conversaoUn": 0.12, "setup": 160 },
+    { "id": "Sachê 2 soldas", "conversaoUn": 0.05, "setup": 100 },
+    { "id": "Sachê 3 soldas", "conversaoUn": 0.06, "setup": 110 },
+    { "id": "Stand-up Pouch", "conversaoUn": 0.09, "setup": 150 },
+    { "id": "Stand-up Pouch Insertado", "conversaoUn": 0.11, "setup": 170 },
+    { "id": "4 soldas", "conversaoUn": 0.08, "setup": 140 }
+  ],
+  "acessorios": {
+    "zipper": { "Sem": 0, "Normal": 0.07, "Pocket": 0.11 },
+    "valvulaUn": 0.05,
+    "bicoUn": 0.15
+  },
+  "lotesPadrao": {
+    "unidades": [1000, 2500, 5000, 7500, 10000],
+    "kg": [50, 100, 200, 400, 800]
+  },
+  "comercial": {
+    "mkup": 0.45,
+    "comissao": 0.04,
+    "formaPagamento": "Faturado",
+    "prazoMeses": 1,
+    "taxaPagamentoMes": 0.018,
+    "taxaCartao": 0.0349,
+    "pisCofins": 0.0925,
+    "icms": 0.12,
+    "ipi": 0.05,
+    "frete": "A combinar (exemplo)",
+    "leadTime": "15 dias úteis (exemplo)",
+    "validade": "10 dias (exemplo)",
+    "localEntrega": "Cidade Exemplo",
+    "estado": "EX",
+    "observacoes": "Condições de demonstração. Troque este texto na configuração da empresa."
+  },
+  "produtoPadrao": {
+    "formato": "Stand-up Pouch",
+    "zipper": "Sem",
+    "valvula": "Sem",
+    "bico": "Sem",
+    "estruturaId": "pet-pe",
+    "verniz": "Brilho",
+    "tipoImpressao": "cmyk-branco",
+    "larguraMm": 160,
+    "alturaMm": 240,
+    "profundidadeMm": 60,
+    "volumeMode": "unidades",
+    "volumeUnidades": 5000,
+    "volumeKg": 100
+  }
+}

@@ -1,0 +1,74 @@
+{
+  "_instrucoes": "Preencha e importe este JSON no Quote (Importar template). Campos com _ mostram opções e são ignorados. null ou vazio usa o padrão do catálogo da empresa.",
+  "_exemplo": "Os ids de estrutura e tinta abaixo são do catálogo fictício de demonstração.",
+  "cliente": {
+    "nome": "",
+    "contato": "",
+    "data": "",
+    "espec": "",
+    "localEntrega": "",
+    "estado": "",
+    "frete": "",
+    "leadTime": "",
+    "validade": "",
+    "observacoes": ""
+  },
+  "produto": {
+    "formato": "Stand-up Pouch",
+    "_opcoes_formato": ["Bobina", "Flat Bottom", "Sachê 2 soldas", "Sachê 3 soldas", "Stand-up Pouch", "Stand-up Pouch Insertado", "4 soldas"],
+    "zipper": "Sem",
+    "_opcoes_zipper": ["Sem", "Normal", "Pocket"],
+    "valvula": "Sem",
+    "bico": "Sem",
+    "_opcoes_sim_nao": ["Sem", "Com"],
+    "estruturaId": "pet-pe",
+    "_opcoes_estruturaId": [
+      "pet-al-pe",
+      "pe-mdo-evoh",
+      "pet-petmet-pe",
+      "pet-pe",
+      "bopp-boppmet",
+      "petg",
+      "bopp-mate-petmet-pe",
+      "bopp-mate-al-pe",
+      "bopp-perola",
+      "bopp-transp"
+    ],
+    "verniz": "Brilho",
+    "_opcoes_verniz": ["Sem", "Brilho", "Verniz Fosco", "Verniz Paper"],
+    "tipoImpressao": "cmyk-branco",
+    "_opcoes_tipoImpressao": ["cmyk-branco", "cmy-branco", "cmyk", "preto", "especial"],
+    "_nomes_tipoImpressao": {
+      "cmyk-branco": "Digital CMYK + branco",
+      "cmy-branco": "Digital CMY + branco",
+      "cmyk": "Digital CMYK sem branco",
+      "preto": "Digital somente preto",
+      "especial": "Digital CMYK + branco + especial"
+    },
+    "gramatura": null,
+    "larguraMm": 160,
+    "alturaMm": 240,
+    "profundidadeMm": 60
+  },
+  "volume": {
+    "volumeMode": "unidades",
+    "_opcoes_volumeMode": ["unidades", "kg"],
+    "volumeUnidades": 5000,
+    "volumeKg": 100,
+    "lotes": [1000, 2500, 5000, 7500, 10000],
+    "_nota_lotes": "Se volumeMode=kg, lotes são em kg. Se unidades, lotes são em unidades."
+  },
+  "comercial": {
+    "mkup": null,
+    "comissao": null,
+    "formaPagamento": "",
+    "_opcoes_formaPagamento": ["Faturado", "Cartão"],
+    "prazoPagamento": null,
+    "taxaPagamentoMes": null,
+    "taxaCartao": null,
+    "pisCofins": null,
+    "icms": null,
+    "ipi": null,
+    "_nota": "Números comerciais são frações (0,45 = 45%). Vazio usa o catálogo da empresa."
+  }
+}

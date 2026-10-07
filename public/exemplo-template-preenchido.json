@@ -1,0 +1,45 @@
+{
+  "_exemplo": "Cliente e condições fictícios, para demonstrar a importação.",
+  "cliente": {
+    "nome": "Café Serra Alta",
+    "contato": "Ana Souza",
+    "data": "20/09/2026",
+    "espec": "Stand-up pouch fosco metalizado 250g",
+    "localEntrega": "Distrito Exemplo",
+    "estado": "EX",
+    "frete": "CIF — entrega inclusa (exemplo)",
+    "leadTime": "12 dias úteis (exemplo)",
+    "validade": "15 dias (exemplo)",
+    "observacoes": "Pedido de demonstração, sem compromisso comercial."
+  },
+  "produto": {
+    "formato": "Stand-up Pouch",
+    "zipper": "Normal",
+    "valvula": "Com",
+    "bico": "Sem",
+    "estruturaId": "pet-pe",
+    "verniz": "Verniz Fosco",
+    "tipoImpressao": "cmyk-branco",
+    "gramatura": 90,
+    "larguraMm": 130,
+    "alturaMm": 210,
+    "profundidadeMm": 70
+  },
+  "volume": {
+    "volumeMode": "unidades",
+    "volumeUnidades": 5000,
+    "volumeKg": 100,
+    "lotes": [1000, 2500, 5000, 7500, 10000]
+  },
+  "comercial": {
+    "mkup": 0.5,
+    "comissao": 0.03,
+    "formaPagamento": "Faturado",
+    "prazoPagamento": 2,
+    "taxaPagamentoMes": 0.012,
+    "taxaCartao": 0.025,
+    "pisCofins": 0.0925,
+    "icms": 0.12,
+    "ipi": 0.05
+  }
+}
