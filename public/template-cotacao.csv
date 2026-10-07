@@ -1,0 +1,41 @@
+campo,valor,opcoes_ou_nota
+cliente.nome,,nome do cliente (obrigatório)
+cliente.contato,,
+cliente.data,,ex.: 20/09/2026
+cliente.espec,,ex.: stand-up pouch 250 g
+cliente.localEntrega,,vazio = padrão do catálogo da empresa
+cliente.estado,,
+cliente.frete,,
+cliente.leadTime,,
+cliente.validade,,
+produto.formato,Stand-up Pouch,"Bobina | Flat Bottom | Sachê 2 soldas | Sachê 3 soldas | Stand-up Pouch | Stand-up Pouch Insertado | 4 soldas | Rótulo | Sleeve | Cartonado"
+produto.zipper,Sem,Sem | Normal | Pocket
+produto.valvula,Sem,Sem | Com
+produto.bico,Sem,Sem | Com
+produto.estruturaId,pet-pe,"pet-al-pe | pe-mdo-evoh | pet-petmet-pe | pet-pe | bopp-boppmet | petg | bopp-mate-petmet-pe | bopp-mate-al-pe | bopp-perola | bopp-transp | cartao-duplex"
+produto.verniz,Brilho,Sem | Brilho | Verniz Fosco | Verniz Paper
+produto.processoId,flexo-ci,id do processo compatível com o formato
+produto.numCores,6,total de estações
+produto.numBranco,1,
+produto.numEspeciais,0,
+produto.pistas,1,bobina
+produto.passoMm,0,0 = altura + vão
+produto.passagem,linha,linha | separada
+produto.ferramentalModo,diluido,diluido | aparte
+produto.gramatura,,vazio = gramatura da estrutura (g/m²)
+produto.larguraMm,160,
+produto.alturaMm,240,
+produto.profundidadeMm,60,usar em flat bottom, stand-up e 4 soldas
+volume.volumeMode,unidades,unidades | kg
+volume.volumeUnidades,5000,base se o modo for unidades
+volume.volumeKg,100,base se o modo for kg
+volume.lotes,"1000;2500;5000;7500;10000",separar por ; (un ou kg conforme volumeMode)
+comercial.mkup,,vazio = padrão do catálogo (fração, ex.: 0,45 = 45%)
+comercial.comissao,,vazio = padrão do catálogo (fração)
+comercial.formaPagamento,,Faturado | Cartão
+comercial.prazoPagamento,,meses
+comercial.taxaPagamentoMes,,fração ao mês
+comercial.taxaCartao,,fração
+comercial.pisCofins,,fração
+comercial.icms,,fração
+comercial.ipi,,fração
