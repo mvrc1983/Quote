@@ -49,7 +49,7 @@ export function ResultsPanel({ input, quote }: Props) {
           <div>
             <dt>Imposição</dt>
             <dd>
-              {breakdown.poses} poses · {formatNumber(breakdown.folhaLarguraMm, 0)}×{formatNumber(breakdown.folhaAlturaMm, 0)} mm
+              {breakdown.poses} {breakdown.poses === 1 ? "pose" : "poses"} · {formatNumber(breakdown.folhaLarguraMm, 0)}×{formatNumber(breakdown.folhaAlturaMm, 0)} mm
             </dd>
           </div>
         )}
