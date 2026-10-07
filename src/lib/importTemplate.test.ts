@@ -32,7 +32,13 @@ const filledJson = {
     bico: "Sem",
     estruturaId: "pet-pe",
     verniz: "Verniz Fosco",
-    tipoImpressao: "cmyk-branco",
+    processoId: "ep-embalagem",
+    numCores: 5,
+    numBranco: 1,
+    numEspeciais: 0,
+    pistas: 1,
+    passoMm: 0,
+    ferramentalModo: "diluido",
     gramatura: 90,
     larguraMm: 130,
     alturaMm: 210,
@@ -78,7 +84,8 @@ describe("mapTemplateObject happy path", () => {
     expect(result.input.bico).toBe("Sem");
     expect(result.input.estruturaId).toBe("pet-pe");
     expect(result.input.verniz).toBe("Verniz Fosco");
-    expect(result.input.tipoImpressao).toBe("cmyk-branco");
+    expect(result.input.grupos[0].processoId).toBe("ep-embalagem");
+    expect(result.input.grupos[0].numCores).toBe(5);
     expect(result.input.gramatura).toBe(90);
     expect(result.input.larguraMm).toBe(130);
     expect(result.input.alturaMm).toBe(210);
@@ -106,7 +113,7 @@ describe("mapTemplateObject happy path", () => {
     const result = mapTemplateObject(
       {
         ...filledJson,
-        produto: { ...filledJson.produto, zipper: "normal", formato: "stand-up pouch", tipoImpressao: "CMYK-BRANCO" },
+        produto: { ...filledJson.produto, zipper: "normal", formato: "stand-up pouch", processoId: "EP-EMBALAGEM" },
       },
       catalogo,
     );
@@ -114,7 +121,8 @@ describe("mapTemplateObject happy path", () => {
     if (!result.ok) return;
     expect(result.input.zipper).toBe("Normal");
     expect(result.input.formato).toBe("Stand-up Pouch");
-    expect(result.input.tipoImpressao).toBe("cmyk-branco");
+    expect(result.input.grupos[0].processoId).toBe("ep-embalagem");
+    expect(result.input.grupos[0].numCores).toBe(5);
   });
 
   it("mapeia lotes em kg quando volumeMode=kg", () => {
@@ -153,7 +161,8 @@ describe("mapTemplateObject happy path", () => {
     expect(result.input.mkup).toBe(0.45);
     expect(result.input.comissao).toBe(0.04);
     expect(result.input.zipper).toBe("Sem");
-    expect(result.input.tipoImpressao).toBe("cmyk-branco");
+    expect(result.input.grupos[0].processoId).toBe("flexo-ci");
+    expect(result.input.grupos[0].numCores).toBe(6);
     expect(result.proposta.lotes).toEqual([
       { unidades: 1000 },
       { unidades: 2500 },
@@ -193,14 +202,14 @@ describe("enum inválido", () => {
     const result = mapTemplateObject(
       {
         ...filledJson,
-        produto: { ...filledJson.produto, estruturaId: "pet-nylon-pe", tipoImpressao: "tinta-hp" },
+        produto: { ...filledJson.produto, estruturaId: "pet-nylon-pe", processoId: "tinta-hp" },
       },
       catalogo,
     );
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.errors.some((e) => e.startsWith("produto.estruturaId:"))).toBe(true);
-    expect(result.errors.some((e) => e.startsWith("produto.tipoImpressao:"))).toBe(true);
+    expect(result.errors.some((e) => e.startsWith("produto.processoId:"))).toBe(true);
   });
 });
 
@@ -217,7 +226,10 @@ produto.valvula,Sem,
 produto.bico,Sem,
 produto.estruturaId,pet-pe,
 produto.verniz,Brilho,
-produto.tipoImpressao,cmyk-branco,
+produto.processoId,ep-embalagem,
+produto.numCores,5,
+produto.numBranco,1,
+produto.numEspeciais,0,
 produto.gramatura,90,
 produto.larguraMm,130,
 produto.alturaMm,210,
@@ -237,7 +249,8 @@ comercial.prazoPagamento,2,
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.input.formato).toBe("Stand-up Pouch");
-    expect(result.input.tipoImpressao).toBe("cmyk-branco");
+    expect(result.input.grupos[0].processoId).toBe("ep-embalagem");
+    expect(result.input.grupos[0].numCores).toBe(5);
     expect(result.input.mkup).toBe(0.5);
     expect(result.proposta.lotes).toEqual([{ unidades: 1000 }, { unidades: 2500 }, { unidades: 5000 }]);
     expect(result.proposta.localEntrega).toBe("Cidade Exemplo");
@@ -261,8 +274,69 @@ describe("importTemplate JSON string", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.proposta.cliente).toBe("Café Serra Alta");
-    expect(result.input.tipoImpressao).toBe("cmyk-branco");
+    expect(result.input.grupos[0].processoId).toBe("ep-embalagem");
+    expect(result.input.grupos[0].numCores).toBe(5);
     expect(result.proposta.localEntrega).toBe("Distrito Exemplo");
+  });
+
+  it("rejeita inkjet fora de rótulo e aceita offset em rótulo, sleeve, flexível e cartonado", () => {
+    const base = {
+      cliente: { nome: "Cliente Teste" },
+      volume: { volumeMode: "unidades", volumeUnidades: 1000 },
+    };
+    const pedir = (produto: Record<string, unknown>) =>
+      mapTemplateObject(
+        {
+          ...base,
+          produto: { estruturaId: "pet-pe", larguraMm: 80, alturaMm: 80, processoId: "flexo-ci", numCores: 4, ...produto },
+        },
+        catalogo,
+      );
+
+    for (const formato of ["Stand-up Pouch", "Sleeve", "Cartonado"]) {
+      const recusado = pedir({ formato, processoId: "inkjet-rotulo" });
+      expect(recusado.ok).toBe(false);
+      if (recusado.ok) return;
+      expect(recusado.errors.join(" ")).toMatch(/rótulo autoadesivo/);
+    }
+
+    expect(pedir({ formato: "Rótulo", processoId: "inkjet-rotulo", numCores: 4 }).ok).toBe(true);
+    expect(pedir({ formato: "Rótulo", processoId: "offset-intermitente" }).ok).toBe(true);
+    expect(pedir({ formato: "Sleeve", processoId: "offset-intermitente" }).ok).toBe(true);
+    expect(pedir({ formato: "Rótulo", processoId: "offset-rotativo" }).ok).toBe(true);
+    expect(pedir({ formato: "Sleeve", processoId: "offset-rotativo" }).ok).toBe(true);
+    expect(pedir({ formato: "Bobina", processoId: "offset-rotativo", larguraMm: 200 }).ok).toBe(true);
+    expect(pedir({ formato: "Cartonado", processoId: "offset-meia-folha", larguraMm: 180, alturaMm: 120, estruturaId: "cartao-duplex" }).ok).toBe(true);
+    expect(pedir({ formato: "Cartonado", processoId: "offset-inteiro", larguraMm: 600, alturaMm: 800, estruturaId: "cartao-duplex" }).ok).toBe(true);
+    expect(pedir({ formato: "Cartonado", processoId: "ep-embalagem", larguraMm: 100, alturaMm: 100, estruturaId: "cartao-duplex" }).ok).toBe(true);
+
+    const meiaGrande = pedir({ formato: "Cartonado", processoId: "offset-meia-folha", larguraMm: 600, alturaMm: 800, estruturaId: "cartao-duplex" });
+    expect(meiaGrande.ok).toBe(false);
+    if (!meiaGrande.ok) expect(meiaGrande.errors.join(" ")).toMatch(/não cabe na folha/);
+
+    const offsetNoCarton = pedir({ formato: "Cartonado", processoId: "offset-intermitente", estruturaId: "cartao-duplex" });
+    expect(offsetNoCarton.ok).toBe(false);
+
+    const hibrido = mapTemplateObject(
+      {
+        ...base,
+        produto: {
+          formato: "Bobina",
+          estruturaId: "pet-pe",
+          larguraMm: 200,
+          alturaMm: 200,
+          passagem: "linha",
+          grupos: [
+            { processoId: "offset-rotativo", numCores: 4, numBranco: 0, numEspeciais: 0 },
+            { processoId: "rotogravura", numCores: 1, numBranco: 1, numEspeciais: 0 },
+          ],
+        },
+      },
+      catalogo,
+    );
+    expect(hibrido.ok).toBe(true);
+    if (!hibrido.ok) return;
+    expect(hibrido.input.grupos).toHaveLength(2);
   });
 
   it("rejeita o template em branco sem cliente.nome", () => {

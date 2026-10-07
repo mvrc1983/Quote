@@ -1,7 +1,21 @@
 import type { Catalogo } from "../config/catalogo";
 import { propostaPadrao, quoteInputPadrao } from "../config/catalogo";
-import type { FormaPagamento, Formato, Lote, PropostaInput, QuoteInput, SimNao, Verniz, VolumeMode, Zipper } from "../types";
-import { FORMAS_PAGAMENTO, FORMATOS, SIM_NAO, VERNIZES, VOLUME_MODES, ZIPPERS } from "../types";
+import type {
+  FormaPagamento,
+  Formato,
+  GrupoImpressao,
+  Lote,
+  ModoFerramental,
+  Passagem,
+  PropostaInput,
+  QuoteInput,
+  SimNao,
+  Verniz,
+  VolumeMode,
+  Zipper,
+} from "../types";
+import { FORMAS_PAGAMENTO, FORMATOS, MODOS_FERRAMENTAL, PASSAGENS, SIM_NAO, VERNIZES, VOLUME_MODES, ZIPPERS } from "../types";
+import { validarImpressao } from "./impressao";
 import { defaultLotesForVolumeMode, lotesMatchVolumeMode, normalizeProposta } from "./proposta";
 
 export type ImportSuccess = {
@@ -62,6 +76,16 @@ function parseNumber(value: unknown, field: string, errors: string[]): number | 
   return n;
 }
 
+function parseInteger(value: unknown, field: string, errors: string[]): number | undefined {
+  const n = parseNumber(value, field, errors);
+  if (n == null) return undefined;
+  if (!Number.isInteger(n) || n < 0) {
+    errors.push(`${field}: inteiro maior ou igual a zero`);
+    return undefined;
+  }
+  return n;
+}
+
 function normalizeEnum<T extends string>(
   value: unknown,
   allowed: readonly T[],
@@ -113,6 +137,69 @@ function parseLotes(value: unknown, mode: VolumeMode, errors: string[]): Lote[] 
   return mode === "kg" ? positive.map((kg) => ({ kg })) : positive.map((unidades) => ({ unidades }));
 }
 
+function lerGrupo(
+  row: JsonObject,
+  path: string,
+  processoIds: readonly string[],
+  base: GrupoImpressao,
+  errors: string[],
+  obrigatorio: boolean,
+): GrupoImpressao | undefined {
+  const campoProcesso = path === "produto" ? "produto.processoId" : `${path}.processoId`;
+  let processoId: string | undefined;
+  if (isBlank(row.processoId)) {
+    if (obrigatorio) errors.push(`${campoProcesso}: obrigatório`);
+    else processoId = base.processoId;
+  } else {
+    processoId = normalizeEnum(row.processoId, processoIds, campoProcesso, errors);
+  }
+  const numCores = isBlank(row.numCores) ? base.numCores : parseInteger(row.numCores, `${path}.numCores`, errors);
+  const numBranco = isBlank(row.numBranco)
+    ? obrigatorio
+      ? 0
+      : base.numBranco
+    : parseInteger(row.numBranco, `${path}.numBranco`, errors);
+  const numEspeciais = isBlank(row.numEspeciais)
+    ? obrigatorio
+      ? 0
+      : base.numEspeciais
+    : parseInteger(row.numEspeciais, `${path}.numEspeciais`, errors);
+  if (processoId == null || numCores == null || numBranco == null || numEspeciais == null) return undefined;
+  return { processoId, numCores, numBranco, numEspeciais };
+}
+
+function parseGrupos(
+  produto: JsonObject,
+  processoIds: readonly string[],
+  base: GrupoImpressao,
+  errors: string[],
+): GrupoImpressao[] | undefined {
+  if (Array.isArray(produto.grupos)) {
+    const grupos: GrupoImpressao[] = [];
+    for (const [index, item] of produto.grupos.entries()) {
+      if (!isObject(item)) {
+        errors.push(`produto.grupos[${index}]: objeto esperado`);
+        continue;
+      }
+      const grupo = lerGrupo(item, `produto.grupos[${index}]`, processoIds, base, errors, true);
+      if (grupo) grupos.push(grupo);
+    }
+    if (grupos.length === 0 && !errors.some((erro) => erro.startsWith("produto.grupos"))) {
+      errors.push("produto.grupos: informe ao menos um processo");
+    }
+    return grupos;
+  }
+
+  const temFlat =
+    !isBlank(produto.processoId) ||
+    !isBlank(produto.numCores) ||
+    !isBlank(produto.numBranco) ||
+    !isBlank(produto.numEspeciais);
+  if (!temFlat) return undefined;
+  const grupo = lerGrupo(produto, "produto", processoIds, base, errors, false);
+  return grupo ? [grupo] : undefined;
+}
+
 export function mapTemplateObject(rawUnknown: unknown, catalogo: Catalogo): ImportResult {
   const errors: string[] = [];
   if (!isObject(rawUnknown)) {
@@ -134,8 +221,19 @@ export function mapTemplateObject(rawUnknown: unknown, catalogo: Catalogo): Impo
   const estruturaIds = catalogo.estruturas.map((item) => item.id);
   const estruturaId = normalizeEnum(produto.estruturaId, estruturaIds, "produto.estruturaId", errors);
   const verniz = normalizeEnum<Verniz>(produto.verniz, VERNIZES, "produto.verniz", errors);
-  const tintaIds = catalogo.tintas.map((item) => item.id);
-  const tipoImpressao = normalizeEnum(produto.tipoImpressao, tintaIds, "produto.tipoImpressao", errors);
+  const processoIds = catalogo.processos.map((item) => item.id);
+  const grupos = parseGrupos(produto, processoIds, baseInput.grupos[0], errors);
+  const passagem = normalizeEnum<Passagem>(produto.passagem, PASSAGENS, "produto.passagem", errors);
+  const ferramentalModo = normalizeEnum<ModoFerramental>(
+    produto.ferramentalModo,
+    MODOS_FERRAMENTAL,
+    "produto.ferramentalModo",
+    errors,
+  );
+  const passoMm = parseNumber(produto.passoMm, "produto.passoMm", errors);
+  const pistas = parseInteger(produto.pistas, "produto.pistas", errors);
+  if (pistas != null && pistas < 1) errors.push("produto.pistas: informe ao menos uma pista");
+  if (passoMm != null && passoMm < 0) errors.push("produto.passoMm: não pode ser negativo");
   const volumeMode = normalizeEnum<VolumeMode>(vol.volumeMode, VOLUME_MODES, "volume.volumeMode", errors);
   const formaPagamento = normalizeEnum<FormaPagamento>(
     comercial.formaPagamento,
@@ -191,7 +289,11 @@ export function mapTemplateObject(rawUnknown: unknown, catalogo: Catalogo): Impo
     bico: bico ?? baseInput.bico,
     estruturaId: estruturaId ?? baseInput.estruturaId,
     verniz: verniz ?? baseInput.verniz,
-    tipoImpressao: tipoImpressao ?? baseInput.tipoImpressao,
+    grupos: grupos ?? baseInput.grupos,
+    passagem: passagem ?? baseInput.passagem,
+    passoMm: passoMm ?? baseInput.passoMm,
+    pistas: pistas ?? baseInput.pistas,
+    ferramentalModo: ferramentalModo ?? baseInput.ferramentalModo,
     larguraMm: larguraMm ?? baseInput.larguraMm,
     alturaMm: alturaMm ?? baseInput.alturaMm,
     profundidadeMm: profundidadeMm ?? 0,
@@ -202,6 +304,9 @@ export function mapTemplateObject(rawUnknown: unknown, catalogo: Catalogo): Impo
     comissao: comissao ?? baseInput.comissao,
   };
   if (gramatura != null && gramatura > 0) input.gramatura = gramatura;
+
+  const errosImpressao = validarImpressao(catalogo, input);
+  if (errosImpressao.length > 0) return { ok: false, errors: errosImpressao };
 
   const mappedLotes = lotes ?? defaultLotesForVolumeMode(catalogo, input.volumeMode);
   if (!lotesMatchVolumeMode(mappedLotes, input.volumeMode)) {

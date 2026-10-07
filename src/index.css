@@ -113,7 +113,8 @@ button { cursor: pointer; }
 .lote-row input { width: 140px; border: 1px solid #cfc6b1; background: var(--paper-2); padding: 8px 10px; }
 
 .proposta-actions { margin-top: 18px; display: grid; gap: 8px; }
-.hint { margin: 0; color: var(--ink-soft); font-size: 13px; }
+.hint { margin: 8px 0 0; color: var(--ink-soft); font-size: 13px; }
+.warn { margin: 8px 0 0; color: #8a3b12; font-size: 13px; }
 
 .btn-primary, .btn-secondary, .btn-ghost, .ghost, .linkish {
   border: 1px solid transparent;

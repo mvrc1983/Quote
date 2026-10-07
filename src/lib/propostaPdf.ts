@@ -63,8 +63,8 @@ export async function buildPropostaPdf(
   applyFonts(doc, fonts);
 
   const estrutura = quote.estrutura;
-  const tinta = catalogo.tintaById[input.tipoImpressao];
   const modeKg = input.volumeMode === "kg";
+  const { breakdown } = quote;
 
   doc.setFillColor(14, 36, 32);
   doc.rect(0, 0, 210, 32, "F");
@@ -130,7 +130,15 @@ export async function buildPropostaPdf(
   const specLines = [
     `Formato: ${input.formato}  ·  Estrutura: ${estrutura.nome}`,
     `Medidas: ${dims}  ·  Gramatura: ${formatNumber(quote.breakdown.gramatura, 0)} g/m²  ·  Área: ${formatNumber(quote.breakdown.areaM2, 4)} m²/un`,
-    `Impressão: ${tinta?.nome ?? input.tipoImpressao}  ·  Verniz: ${input.verniz}`,
+    `Impressão: ${quote.processoNome}  ·  ${breakdown.numCores} cores  ·  Verniz: ${input.verniz}`,
+    breakdown.poses > 0
+      ? `Folha ${formatNumber(breakdown.folhaLarguraMm, 0)}×${formatNumber(breakdown.folhaAlturaMm, 0)} mm  ·  ${breakdown.poses} poses  ·  acerto ${breakdown.folhasAcerto} fls`
+      : `Banda ${formatNumber(breakdown.larguraWebMm, 0)} mm  ·  passo ${formatNumber(breakdown.passoMm, 0)} mm  ·  ${breakdown.pistas} pista(s)`,
+    breakdown.ferramental > 0
+      ? input.ferramentalModo === "diluido"
+        ? `Ferramental diluído no lote: ${formatBRL(breakdown.ferramental)}`
+        : `Ferramental cobrado à parte: ${formatBRL(quote.ferramentalAParte)}`
+      : "Ferramental: sem clichê, chapa ou cilindro",
     `Zipper: ${input.zipper}  ·  Válvula: ${input.valvula}  ·  Bico: ${input.bico}`,
     `Peso estimado: ${formatNumber(quote.breakdown.pesoUnKg * 1000, 2)} g/un`,
   ];

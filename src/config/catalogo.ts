@@ -1,11 +1,91 @@
 import exemploJson from "./empresa.exemplo.json" with { type: "json" };
-import type { Estrutura, FormaPagamento, Formato, PropostaInput, QuoteInput, SimNao, Tinta, Verniz, VolumeMode, Zipper } from "../types";
-import { FORMAS_PAGAMENTO, FORMATOS, SIM_NAO, VERNIZES, VOLUME_MODES, ZIPPERS } from "../types";
+import type {
+  Alimentacao,
+  Aplicacao,
+  Estrutura,
+  FamiliaProcesso,
+  FormaPagamento,
+  Formato,
+  ModoFerramental,
+  Passagem,
+  PropostaInput,
+  QuoteInput,
+  SimNao,
+  TecnologiaDigital,
+  Verniz,
+  VolumeMode,
+  Zipper,
+} from "../types";
+import {
+  APLICACOES,
+  ALIMENTACOES,
+  FAMILIAS_PROCESSO,
+  FORMAS_PAGAMENTO,
+  FORMATOS,
+  MODOS_FERRAMENTAL,
+  PASSAGENS,
+  SIM_NAO,
+  TECNOLOGIAS_DIGITAL,
+  VERNIZES,
+  VOLUME_MODES,
+  ZIPPERS,
+  aplicacaoDoFormato,
+} from "../types";
 
 export type PrecoFormato = {
   id: Formato;
   conversaoUn: number;
   setup: number;
+  custoCosturaUn: number;
+  custoCorteUn: number;
+  seamMm: number;
+};
+
+export type Processo = {
+  id: string;
+  nome: string;
+  familia: FamiliaProcesso;
+  tecnologia: TecnologiaDigital;
+  aplicacoes: Aplicacao[];
+  /** Aplicações em que este processo é o padrão sugerido. Vazio = permitido, mas não sugerido. */
+  sugeridoPara: Aplicacao[];
+  alimentacao: Alimentacao;
+  larguraUtilMm: number;
+  velocidadeMMin: number;
+  custoHora: number;
+  setupHorasBase: number;
+  setupHorasPorCor: number;
+  metrosAcertoBase: number;
+  metrosAcertoPorCor: number;
+  /** Folha máxima do alimentador. Zero em máquina de bobina. */
+  folhaLarguraMaxMm: number;
+  folhaAlturaMaxMm: number;
+  folhaLarguraMinMm: number;
+  folhaAlturaMinMm: number;
+  pincaMm: number;
+  margemLateralMm: number;
+  margemFundoMm: number;
+  entrePosesMm: number;
+  folhasPorHora: number;
+  folhasAcertoBase: number;
+  folhasAcertoPorCor: number;
+  consumoTintaGm2Cheio: number;
+  precoTintaKg: number;
+  precoTintaBrancoKg: number;
+  precoTintaEspecialKg: number;
+  coberturaProcesso: number;
+  coberturaBranco: number;
+  coberturaEspecial: number;
+  /** Clique digital em R$/m² por separação. Zero quando o custo está na tinta. */
+  custoM2PorSeparacao: number;
+  temFerramental: boolean;
+  custoFerramentalPorCor: number;
+  custoFerramentalPorM2: number;
+  /** Offset intermitente: a chapa acompanha o passo, sem cilindro gravado. */
+  custoFerramentalPorMmPasso: number;
+  ferramentalModoPadrao: ModoFerramental;
+  gapRepeticaoMm: number;
+  gapPistaMm: number;
 };
 
 export type ComercialPadrao = {
@@ -33,7 +113,14 @@ export type ProdutoPadrao = {
   bico: SimNao;
   estruturaId: string;
   verniz: Verniz;
-  tipoImpressao: string;
+  processoId: string;
+  numCores: number;
+  numBranco: number;
+  numEspeciais: number;
+  passagem: Passagem;
+  passoMm: number;
+  pistas: number;
+  ferramentalModo: ModoFerramental;
   larguraMm: number;
   alturaMm: number;
   profundidadeMm: number;
@@ -48,9 +135,8 @@ export type Catalogo = {
   aviso: string;
   empresa: { nome: string; cidade: string; uf: string; linha: string };
   fatorDesperdicio: number;
-  setupImpressao: number;
   estruturas: Estrutura[];
-  tintas: Tinta[];
+  processos: Processo[];
   vernizes: { id: Verniz; precoM2: number }[];
   formatos: PrecoFormato[];
   acessorios: { zipper: Record<Zipper, number>; valvulaUn: number; bicoUn: number };
@@ -58,10 +144,11 @@ export type Catalogo = {
   comercial: ComercialPadrao;
   produtoPadrao: ProdutoPadrao;
   estruturaById: Record<string, Estrutura>;
-  tintaById: Record<string, Tinta>;
+  processoById: Record<string, Processo>;
   precoVernizM2: Record<Verniz, number>;
   conversaoUn: Record<Formato, number>;
   setupConversao: Record<Formato, number>;
+  formatoById: Record<Formato, PrecoFormato>;
 };
 
 function fail(path: string, msg: string): never {
@@ -69,7 +156,8 @@ function fail(path: string, msg: string): never {
 }
 
 function isObj(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
+  return true;
 }
 
 function obj(value: unknown, path: string): Record<string, unknown> {
@@ -89,6 +177,12 @@ function text(source: Record<string, unknown>, key: string, path: string): strin
   return value;
 }
 
+function bool(source: Record<string, unknown>, key: string, path: string): boolean {
+  const value = source[key];
+  if (typeof value !== "boolean") fail(`${path}.${key}`, "booleano esperado");
+  return value;
+}
+
 function oneOf<T extends string>(value: unknown, allowed: readonly T[], path: string): T {
   if (typeof value === "string" && (allowed as readonly string[]).includes(value)) return value as T;
   fail(path, `use um destes valores: ${allowed.join(", ")}`);
@@ -96,6 +190,22 @@ function oneOf<T extends string>(value: unknown, allowed: readonly T[], path: st
 
 function nonNegative(value: number, path: string): number {
   if (value < 0) fail(path, "não pode ser negativo");
+  return value;
+}
+
+function positive(value: number, path: string): number {
+  if (value <= 0) fail(path, "deve ser maior que zero");
+  return value;
+}
+
+function intNonNeg(source: Record<string, unknown>, key: string, path: string): number {
+  const value = num(source, key, path);
+  if (!Number.isInteger(value) || value < 0) fail(`${path}.${key}`, "inteiro maior ou igual a zero");
+  return value;
+}
+
+function unitInterval(value: number, path: string): number {
+  if (value < 0 || value > 1) fail(path, "deve ficar entre 0 e 1");
   return value;
 }
 
@@ -118,6 +228,115 @@ function indexById<T extends { id: string }>(items: T[], path: string): Record<s
   return out;
 }
 
+function aplicacoesDe(value: unknown, path: string): Aplicacao[] {
+  if (!Array.isArray(value) || value.length === 0) fail(path, "informe ao menos uma aplicação");
+  const out: Aplicacao[] = [];
+  for (const [index, item] of value.entries()) {
+    const aplicacao = oneOf(item, APLICACOES, `${path}[${index}]`);
+    if (out.includes(aplicacao)) fail(`${path}[${index}]`, "aplicação repetida");
+    out.push(aplicacao);
+  }
+  return out;
+}
+
+function parseProcesso(item: unknown, index: number): Processo {
+  const path = `processos[${index}]`;
+  const row = obj(item, path);
+  const familia = oneOf(row.familia, FAMILIAS_PROCESSO, `${path}.familia`);
+  const tecnologia = oneOf(row.tecnologia, TECNOLOGIAS_DIGITAL, `${path}.tecnologia`);
+  const aplicacoes = aplicacoesDe(row.aplicacoes, `${path}.aplicacoes`);
+  let sugeridos: Aplicacao[] = [];
+  if (row.sugeridoPara == null) {
+    sugeridos = [];
+  } else if (!Array.isArray(row.sugeridoPara)) {
+    fail(`${path}.sugeridoPara`, "lista esperada");
+  } else {
+    for (const [i, itemSugerido] of row.sugeridoPara.entries()) {
+      const aplicacao = oneOf(itemSugerido, APLICACOES, `${path}.sugeridoPara[${i}]`);
+      if (!aplicacoes.includes(aplicacao)) {
+        fail(`${path}.sugeridoPara[${i}]`, "só pode sugerir uma aplicação que o processo atende");
+      }
+      if (sugeridos.includes(aplicacao)) fail(`${path}.sugeridoPara[${i}]`, "aplicação repetida");
+      sugeridos.push(aplicacao);
+    }
+  }
+
+  if (familia === "digital") {
+    if (tecnologia === "nenhuma") fail(`${path}.tecnologia`, "processo digital precisa de tecnologia");
+  } else if (tecnologia !== "nenhuma") {
+    fail(`${path}.tecnologia`, "só processo digital usa tecnologia de impressão");
+  }
+  if (tecnologia === "inkjet") {
+    const soRotulo = aplicacoes.length === 1 && aplicacoes[0] === "rotulo";
+    if (!soRotulo) fail(`${path}.aplicacoes`, "inkjet só pode ser cadastrado para rótulo autoadesivo");
+  }
+
+  const alimentacao = oneOf(row.alimentacao, ALIMENTACOES, `${path}.alimentacao`);
+  const processo: Processo = {
+    id: text(row, "id", path),
+    nome: text(row, "nome", path),
+    familia,
+    tecnologia,
+    aplicacoes,
+    sugeridoPara: sugeridos,
+    alimentacao,
+    larguraUtilMm: nonNegative(num(row, "larguraUtilMm", path), `${path}.larguraUtilMm`),
+    velocidadeMMin: nonNegative(num(row, "velocidadeMMin", path), `${path}.velocidadeMMin`),
+    custoHora: nonNegative(num(row, "custoHora", path), `${path}.custoHora`),
+    setupHorasBase: nonNegative(num(row, "setupHorasBase", path), `${path}.setupHorasBase`),
+    setupHorasPorCor: nonNegative(num(row, "setupHorasPorCor", path), `${path}.setupHorasPorCor`),
+    metrosAcertoBase: nonNegative(num(row, "metrosAcertoBase", path), `${path}.metrosAcertoBase`),
+    metrosAcertoPorCor: nonNegative(num(row, "metrosAcertoPorCor", path), `${path}.metrosAcertoPorCor`),
+    folhaLarguraMaxMm: nonNegative(num(row, "folhaLarguraMaxMm", path), `${path}.folhaLarguraMaxMm`),
+    folhaAlturaMaxMm: nonNegative(num(row, "folhaAlturaMaxMm", path), `${path}.folhaAlturaMaxMm`),
+    folhaLarguraMinMm: nonNegative(num(row, "folhaLarguraMinMm", path), `${path}.folhaLarguraMinMm`),
+    folhaAlturaMinMm: nonNegative(num(row, "folhaAlturaMinMm", path), `${path}.folhaAlturaMinMm`),
+    pincaMm: nonNegative(num(row, "pincaMm", path), `${path}.pincaMm`),
+    margemLateralMm: nonNegative(num(row, "margemLateralMm", path), `${path}.margemLateralMm`),
+    margemFundoMm: nonNegative(num(row, "margemFundoMm", path), `${path}.margemFundoMm`),
+    entrePosesMm: nonNegative(num(row, "entrePosesMm", path), `${path}.entrePosesMm`),
+    folhasPorHora: nonNegative(num(row, "folhasPorHora", path), `${path}.folhasPorHora`),
+    folhasAcertoBase: nonNegative(num(row, "folhasAcertoBase", path), `${path}.folhasAcertoBase`),
+    folhasAcertoPorCor: nonNegative(num(row, "folhasAcertoPorCor", path), `${path}.folhasAcertoPorCor`),
+    consumoTintaGm2Cheio: nonNegative(num(row, "consumoTintaGm2Cheio", path), `${path}.consumoTintaGm2Cheio`),
+    precoTintaKg: nonNegative(num(row, "precoTintaKg", path), `${path}.precoTintaKg`),
+    precoTintaBrancoKg: nonNegative(num(row, "precoTintaBrancoKg", path), `${path}.precoTintaBrancoKg`),
+    precoTintaEspecialKg: nonNegative(num(row, "precoTintaEspecialKg", path), `${path}.precoTintaEspecialKg`),
+    coberturaProcesso: unitInterval(num(row, "coberturaProcesso", path), `${path}.coberturaProcesso`),
+    coberturaBranco: unitInterval(num(row, "coberturaBranco", path), `${path}.coberturaBranco`),
+    coberturaEspecial: unitInterval(num(row, "coberturaEspecial", path), `${path}.coberturaEspecial`),
+    custoM2PorSeparacao: nonNegative(num(row, "custoM2PorSeparacao", path), `${path}.custoM2PorSeparacao`),
+    temFerramental: bool(row, "temFerramental", path),
+    custoFerramentalPorCor: nonNegative(num(row, "custoFerramentalPorCor", path), `${path}.custoFerramentalPorCor`),
+    custoFerramentalPorM2: nonNegative(num(row, "custoFerramentalPorM2", path), `${path}.custoFerramentalPorM2`),
+    custoFerramentalPorMmPasso: nonNegative(num(row, "custoFerramentalPorMmPasso", path), `${path}.custoFerramentalPorMmPasso`),
+    ferramentalModoPadrao: oneOf(row.ferramentalModoPadrao, MODOS_FERRAMENTAL, `${path}.ferramentalModoPadrao`),
+    gapRepeticaoMm: nonNegative(num(row, "gapRepeticaoMm", path), `${path}.gapRepeticaoMm`),
+    gapPistaMm: nonNegative(num(row, "gapPistaMm", path), `${path}.gapPistaMm`),
+  };
+
+  if (alimentacao === "bobina") {
+    positive(processo.velocidadeMMin, `${path}.velocidadeMMin`);
+    positive(processo.larguraUtilMm, `${path}.larguraUtilMm`);
+  } else {
+    positive(processo.folhasPorHora, `${path}.folhasPorHora`);
+    positive(processo.folhaLarguraMaxMm, `${path}.folhaLarguraMaxMm`);
+    positive(processo.folhaAlturaMaxMm, `${path}.folhaAlturaMaxMm`);
+    positive(processo.folhaLarguraMinMm, `${path}.folhaLarguraMinMm`);
+    positive(processo.folhaAlturaMinMm, `${path}.folhaAlturaMinMm`);
+    if (processo.folhaLarguraMinMm > processo.folhaLarguraMaxMm) {
+      fail(`${path}.folhaLarguraMinMm`, "não pode passar da largura máxima");
+    }
+    if (processo.folhaAlturaMinMm > processo.folhaAlturaMaxMm) {
+      fail(`${path}.folhaAlturaMinMm`, "não pode passar da altura máxima");
+    }
+    const utilW = processo.folhaLarguraMaxMm - 2 * processo.margemLateralMm;
+    const utilH = processo.folhaAlturaMaxMm - processo.pincaMm - processo.margemFundoMm;
+    if (utilW <= 0 || utilH <= 0) fail(path, "pinça e margens consomem a folha máxima");
+  }
+  return processo;
+}
+
 export function parseCatalogo(raw: unknown): Catalogo {
   const root = obj(raw, "catalogo");
   const exemplo = root.exemplo;
@@ -137,7 +356,6 @@ export function parseCatalogo(raw: unknown): Catalogo {
 
   const fatorDesperdicio = num(root, "fatorDesperdicio", "catalogo");
   if (fatorDesperdicio <= 0) fail("fatorDesperdicio", "deve ser maior que zero");
-  const setupImpressao = nonNegative(num(root, "setupImpressao", "catalogo"), "setupImpressao");
 
   if (!Array.isArray(root.estruturas) || root.estruturas.length === 0) fail("estruturas", "informe ao menos uma estrutura");
   const estruturas: Estrutura[] = root.estruturas.map((item, index) => {
@@ -154,16 +372,9 @@ export function parseCatalogo(raw: unknown): Catalogo {
   });
   const estruturaById = indexById(estruturas, "estruturas");
 
-  if (!Array.isArray(root.tintas) || root.tintas.length === 0) fail("tintas", "informe ao menos uma tinta");
-  const tintas: Tinta[] = root.tintas.map((item, index) => {
-    const row = obj(item, `tintas[${index}]`);
-    return {
-      id: text(row, "id", `tintas[${index}]`),
-      nome: text(row, "nome", `tintas[${index}]`),
-      precoM2: nonNegative(num(row, "precoM2", `tintas[${index}]`), `tintas[${index}].precoM2`),
-    };
-  });
-  const tintaById = indexById(tintas, "tintas");
+  if (!Array.isArray(root.processos) || root.processos.length === 0) fail("processos", "informe ao menos um processo");
+  const processos = root.processos.map((item, index) => parseProcesso(item, index));
+  const processoById = indexById(processos, "processos");
 
   if (!Array.isArray(root.vernizes)) fail("vernizes", "lista esperada");
   const vernizes = root.vernizes.map((item, index) => {
@@ -186,15 +397,20 @@ export function parseCatalogo(raw: unknown): Catalogo {
       id: oneOf(row.id, FORMATOS, `formatos[${index}].id`),
       conversaoUn: nonNegative(num(row, "conversaoUn", `formatos[${index}]`), `formatos[${index}].conversaoUn`),
       setup: nonNegative(num(row, "setup", `formatos[${index}]`), `formatos[${index}].setup`),
+      custoCosturaUn: nonNegative(num(row, "custoCosturaUn", `formatos[${index}]`), `formatos[${index}].custoCosturaUn`),
+      custoCorteUn: nonNegative(num(row, "custoCorteUn", `formatos[${index}]`), `formatos[${index}].custoCorteUn`),
+      seamMm: nonNegative(num(row, "seamMm", `formatos[${index}]`), `formatos[${index}].seamMm`),
     };
   });
   const conversaoUn = {} as Record<Formato, number>;
   const setupConversao = {} as Record<Formato, number>;
+  const formatoById = {} as Record<Formato, PrecoFormato>;
   for (const formato of FORMATOS) {
     const found = formatos.filter((item) => item.id === formato);
     if (found.length !== 1) fail("formatos", `informe o formato "${formato}" uma vez`);
-    conversaoUn[formato] = found[0].conversaoUn;
+    conversaoUn[formato] = found[0].conversaoUn + found[0].custoCosturaUn + found[0].custoCorteUn;
     setupConversao[formato] = found[0].setup;
+    formatoById[formato] = found[0];
   }
 
   const acessoriosRaw = obj(root.acessorios, "acessorios");
@@ -249,7 +465,14 @@ export function parseCatalogo(raw: unknown): Catalogo {
     bico: oneOf(produtoRaw.bico, SIM_NAO, "produtoPadrao.bico"),
     estruturaId: text(produtoRaw, "estruturaId", "produtoPadrao"),
     verniz: oneOf(produtoRaw.verniz, VERNIZES, "produtoPadrao.verniz"),
-    tipoImpressao: text(produtoRaw, "tipoImpressao", "produtoPadrao"),
+    processoId: text(produtoRaw, "processoId", "produtoPadrao"),
+    numCores: intNonNeg(produtoRaw, "numCores", "produtoPadrao"),
+    numBranco: intNonNeg(produtoRaw, "numBranco", "produtoPadrao"),
+    numEspeciais: intNonNeg(produtoRaw, "numEspeciais", "produtoPadrao"),
+    passagem: oneOf(produtoRaw.passagem, PASSAGENS, "produtoPadrao.passagem"),
+    passoMm: nonNegative(num(produtoRaw, "passoMm", "produtoPadrao"), "produtoPadrao.passoMm"),
+    pistas: intNonNeg(produtoRaw, "pistas", "produtoPadrao"),
+    ferramentalModo: oneOf(produtoRaw.ferramentalModo, MODOS_FERRAMENTAL, "produtoPadrao.ferramentalModo"),
     larguraMm: num(produtoRaw, "larguraMm", "produtoPadrao"),
     alturaMm: num(produtoRaw, "alturaMm", "produtoPadrao"),
     profundidadeMm: num(produtoRaw, "profundidadeMm", "produtoPadrao"),
@@ -258,8 +481,18 @@ export function parseCatalogo(raw: unknown): Catalogo {
     volumeKg: num(produtoRaw, "volumeKg", "produtoPadrao"),
   };
   if (!estruturaById[produtoPadrao.estruturaId]) fail("produtoPadrao.estruturaId", "estrutura inexistente");
-  if (!tintaById[produtoPadrao.tipoImpressao]) fail("produtoPadrao.tipoImpressao", "tinta inexistente");
-  if (produtoPadrao.larguraMm <= 0 || produtoPadrao.alturaMm <= 0) fail("produtoPadrao", "largura e altura devem ser maiores que zero");
+  const processoPadrao = processoById[produtoPadrao.processoId];
+  if (!processoPadrao) fail("produtoPadrao.processoId", "processo inexistente");
+  if (!processoPadrao.aplicacoes.includes(aplicacaoDoFormato(produtoPadrao.formato))) {
+    fail("produtoPadrao.processoId", "processo incompatível com o formato padrão");
+  }
+  if (produtoPadrao.pistas < 1) fail("produtoPadrao.pistas", "informe ao menos uma pista");
+  if (produtoPadrao.numBranco + produtoPadrao.numEspeciais > produtoPadrao.numCores) {
+    fail("produtoPadrao", "branco + especiais não pode passar do total de cores");
+  }
+  if (produtoPadrao.larguraMm <= 0 || produtoPadrao.alturaMm <= 0) {
+    fail("produtoPadrao", "largura e altura devem ser maiores que zero");
+  }
   if (produtoPadrao.profundidadeMm < 0) fail("produtoPadrao.profundidadeMm", "não pode ser negativa");
 
   return {
@@ -267,9 +500,8 @@ export function parseCatalogo(raw: unknown): Catalogo {
     aviso,
     empresa,
     fatorDesperdicio,
-    setupImpressao,
     estruturas,
-    tintas,
+    processos,
     vernizes,
     formatos,
     acessorios,
@@ -277,10 +509,11 @@ export function parseCatalogo(raw: unknown): Catalogo {
     comercial,
     produtoPadrao,
     estruturaById,
-    tintaById,
+    processoById,
     precoVernizM2,
     conversaoUn,
     setupConversao,
+    formatoById,
   };
 }
 
@@ -300,7 +533,18 @@ export function quoteInputPadrao(catalogo: Catalogo): QuoteInput {
     bico: produto.bico,
     estruturaId: produto.estruturaId,
     verniz: produto.verniz,
-    tipoImpressao: produto.tipoImpressao,
+    grupos: [
+      {
+        processoId: produto.processoId,
+        numCores: produto.numCores,
+        numBranco: produto.numBranco,
+        numEspeciais: produto.numEspeciais,
+      },
+    ],
+    passagem: produto.passagem,
+    passoMm: produto.passoMm,
+    pistas: produto.pistas,
+    ferramentalModo: produto.ferramentalModo,
     larguraMm: produto.larguraMm,
     alturaMm: produto.alturaMm,
     profundidadeMm: produto.profundidadeMm,

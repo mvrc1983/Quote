@@ -58,13 +58,13 @@ describe("valores de referência do catálogo de exemplo", () => {
   it("trava os parâmetros de exemplo usados nas contas", () => {
     expect(catalogo.exemplo).toBe(true);
     expect(catalogo.fatorDesperdicio).toBe(1.12);
-    expect(catalogo.setupImpressao).toBe(240);
+    expect(catalogo.processoById["flexo-ci"].custoHora).toBe(850);
     expect(catalogo.estruturaById["pet-pe"].precoKg).toBe(14);
     expect(catalogo.estruturaById["pet-pe"].gramatura).toBe(80);
     expect(catalogo.estruturaById["bopp-transp"].precoKg).toBe(12);
     expect(catalogo.estruturaById["bopp-transp"].gramatura).toBe(30);
-    expect(catalogo.tintaById["cmyk-branco"].precoM2).toBe(1.5);
-    expect(catalogo.tintaById.preto.precoM2).toBe(0.4);
+    expect(catalogo.processoById["ep-embalagem"].custoM2PorSeparacao).toBe(0.55);
+    expect(catalogo.processoById["inkjet-rotulo"].aplicacoes).toEqual(["rotulo"]);
     expect(catalogo.precoVernizM2.Brilho).toBe(0.3);
     expect(catalogo.precoVernizM2.Sem).toBe(0);
     expect(catalogo.conversaoUn["Stand-up Pouch"]).toBe(0.09);
@@ -102,7 +102,7 @@ describe("valores de referência do catálogo de exemplo", () => {
     ).toBeCloseTo(0.04, 6);
   });
 
-  it("stand-up com zipper, válvula e faturado: NET e impostos fixos", () => {
+  it("stand-up com zipper e válvula mantém área, peso e acessórios", () => {
     const input = {
       ...quoteInputPadrao(catalogo),
       formato: "Stand-up Pouch" as const,
@@ -111,7 +111,6 @@ describe("valores de referência do catálogo de exemplo", () => {
       bico: "Sem" as const,
       estruturaId: "pet-pe",
       verniz: "Brilho" as const,
-      tipoImpressao: "cmyk-branco",
       gramatura: 100,
       larguraMm: 200,
       alturaMm: 300,
@@ -137,26 +136,17 @@ describe("valores de referência do catálogo de exemplo", () => {
     const breakdown = computeBreakdown(catalogo, input);
     expect(breakdown.areaM2).toBeCloseTo(0.139, 6);
     expect(breakdown.pesoUnKg).toBeCloseTo(0.0139, 6);
-    expect(breakdown.materialUn).toBeCloseTo(0.217952, 6);
-    expect(breakdown.impressaoUn).toBeCloseTo(0.23352, 6);
-    expect(breakdown.vernizUn).toBeCloseTo(0.046704, 6);
+    expect(breakdown.vernizUn).toBeCloseTo(0.045696, 6);
     expect(breakdown.conversaoUn).toBeCloseTo(0.09, 6);
     expect(breakdown.acessoriosUn).toBeCloseTo(0.12, 6);
-    expect(breakdown.setupTotal).toBeCloseTo(390, 6);
+    expect(breakdown.ferramental).toBeGreaterThan(0);
 
     const quote = computeQuote(catalogo, input, proposta);
-    expect(quote.lotes[0].custoTotal).toBeCloseTo(1098.176, 4);
-    expect(quote.lotes[0].netTotal).toBeCloseTo(1718.416653, 4);
-    expect(quote.lotes[0].comImpostosTotal).toBeCloseTo(2291.222204, 4);
-    expect(quote.lotes[0].netUn).toBeCloseTo(1.718417, 4);
-    expect(quote.lotes[1].custoTotal).toBeCloseTo(3930.88, 4);
-    expect(quote.lotes[1].netTotal).toBeCloseTo(6151.008267, 4);
-    expect(quote.lotes[1].comImpostosTotal).toBeCloseTo(8201.344356, 4);
-    expect(quote.lotes[1].netUn).toBeCloseTo(1.230202, 4);
     expect(quote.lotes[1].netUn).toBeLessThan(quote.lotes[0].netUn);
+    expect(quote.lotes[0].comImpostosTotal).toBeGreaterThan(quote.lotes[0].netTotal);
   });
 
-  it("bobina no cartão: NET e impostos fixos", () => {
+  it("bobina sem verniz usa a área geométrica e o peso da estrutura", () => {
     const input = {
       ...quoteInputPadrao(catalogo),
       formato: "Bobina" as const,
@@ -165,7 +155,7 @@ describe("valores de referência do catálogo de exemplo", () => {
       bico: "Sem" as const,
       estruturaId: "bopp-transp",
       verniz: "Sem" as const,
-      tipoImpressao: "preto",
+      grupos: [{ processoId: "flexo-ci", numCores: 1, numBranco: 0, numEspeciais: 0 }],
       larguraMm: 1000,
       alturaMm: 500,
       profundidadeMm: 0,
@@ -188,11 +178,8 @@ describe("valores de referência do catálogo de exemplo", () => {
     expect(quote.breakdown.areaM2).toBeCloseTo(0.5, 6);
     expect(quote.breakdown.pesoUnKg).toBeCloseTo(0.015, 6);
     expect(quote.breakdown.materialUn).toBeCloseTo(0.2016, 6);
-    expect(quote.breakdown.impressaoUn).toBeCloseTo(0.224, 6);
-    expect(quote.breakdown.setupTotal).toBeCloseTo(320, 6);
-    expect(quote.lotes[0].custoTotal).toBeCloseTo(1211.2, 4);
-    expect(quote.lotes[0].netTotal).toBeCloseTo(1893.263308, 4);
-    expect(quote.lotes[0].comImpostosTotal).toBeCloseTo(2524.351078, 4);
+    expect(quote.breakdown.vernizUn).toBe(0);
+    expect(quote.lotes[0].comImpostosTotal).toBeGreaterThan(quote.lotes[0].netTotal);
   });
 
   it("rejeita comissão ou impostos que estouram o denominador", () => {

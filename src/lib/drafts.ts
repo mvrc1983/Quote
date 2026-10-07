@@ -8,7 +8,7 @@ export type Draft = {
   proposta: PropostaInput;
 };
 
-const KEY = "quote-rascunhos-v1";
+const KEY = "quote-rascunhos-v2";
 
 export function loadDrafts(): Draft[] {
   try {

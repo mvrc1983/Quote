@@ -1,6 +1,7 @@
+import { custoVariavelUn } from "../lib/costing";
+import { formatBRL, formatNumber } from "../lib/format";
 import type { QuoteInput, QuoteResult } from "../types";
 import { isLoteKg } from "../types";
-import { formatBRL, formatNumber } from "../lib/format";
 
 type Props = {
   input: QuoteInput;
@@ -16,7 +17,7 @@ export function ResultsPanel({ input, quote }: Props) {
       <header className="panel-head">
         <h2>Cálculo</h2>
         <p>
-          {estrutura.nome} · {formatNumber(breakdown.gramatura, 0)} g/m²
+          {estrutura.nome} · {quote.processoNome} · {formatNumber(breakdown.gramatura, 0)} g/m²
         </p>
       </header>
 
@@ -31,21 +32,34 @@ export function ResultsPanel({ input, quote }: Props) {
         </div>
         <div>
           <dt>Custo variável / un</dt>
-          <dd>
-            {formatBRL(
-              breakdown.materialUn +
-                breakdown.impressaoUn +
-                breakdown.vernizUn +
-                breakdown.conversaoUn +
-                breakdown.acessoriosUn,
-            )}
-          </dd>
+          <dd>{formatBRL(custoVariavelUn(breakdown))}</dd>
         </div>
         <div>
           <dt>Setup</dt>
           <dd>{formatBRL(breakdown.setupTotal)}</dd>
         </div>
+        <div>
+          <dt>Ferramental</dt>
+          <dd>
+            {formatBRL(breakdown.ferramentalNoLote ? breakdown.ferramental : quote.ferramentalAParte)}
+            {breakdown.ferramentalNoLote ? "" : " à parte"}
+          </dd>
+        </div>
+        {breakdown.poses > 0 && (
+          <div>
+            <dt>Imposição</dt>
+            <dd>
+              {breakdown.poses} poses · {formatNumber(breakdown.folhaLarguraMm, 0)}×{formatNumber(breakdown.folhaAlturaMm, 0)} mm
+            </dd>
+          </div>
+        )}
       </dl>
+      {breakdown.avisos.length > 0 &&
+        breakdown.avisos.map((aviso) => (
+          <p className="warn" key={aviso}>
+            {aviso}
+          </p>
+        ))}
 
       <table className="price-table">
         <thead>

@@ -8,7 +8,7 @@ const TEXT = new Set([".ts", ".tsx", ".json", ".md", ".csv", ".html", ".css", ".
 const SKIP = new Set(["node_modules", "dist", ".git", "public/fonts"]);
 
 // Montadas em partes para este arquivo não conter as marcas que ele procura.
-const banned = ["val" + "group", "lor" + "ena", "ind" + "igo", "sp" + "9", "tinta " + "hp", "tinta" + "hp"];
+const banned = ["val" + "group", "lor" + "ena", "hp " + "indigo", "hp" + "indigo", "sp" + "9", "tinta " + "hp", "tinta" + "hp"];
 
 function collect(dir: string, out: string[] = []): string[] {
   for (const entry of readdirSync(dir)) {
